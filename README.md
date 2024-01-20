@@ -7,4 +7,4 @@ collection of Verilog code samples e.g. for FPGA
 
 ### workflow
 - makefile for MinGW
-- .bat file for mapping F: folder to directory (this in 2024 is an unfunny joke but whatever, it gets the work done...)
+- .bat file for mapping directory to f: drive on windows (this in 2024 is an unfunny joke but whatever, it gets the work done...)
