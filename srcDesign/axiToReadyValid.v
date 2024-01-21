@@ -85,10 +85,20 @@ module axiToReadyValid
    reg [1:0]					rresp;
    reg						rrespValid = 1'd0;
    reg [31:0]					rdata;   
+
+   // disable all "x" for Vivado module integration
+   // - adding 1'b0 changes nothing and gets optimized away (implementation)
+   // - adding 1'bx invalidates all bits (simulation)
+   localparam					VALID = 1'b0;
+`ifdef SIM
+   localparam					INVALID = 1'bx;
+`else
+   localparam					INVALID = 1'b0;
+`endif
    
    assign S00_AXI_rvalid = rrespValid;   
-   assign S00_AXI_rresp = rresp;
-   assign S00_AXI_rdata = rdata;
+   assign S00_AXI_rresp = rresp + (rrespValid ? VALID : INVALID);   
+   assign S00_AXI_rdata = rdata + (rrespValid ? VALID : INVALID);   
    
    assign S00_AXI_awready = !writeChanBusy;
    assign S00_AXI_arready = !readChanBusy;
@@ -97,13 +107,12 @@ module axiToReadyValid
    assign B_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd1);
    assign C_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd2);
    assign D_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd3);
-   localparam					INVDATA = {C_S00_AXI_DATA_WIDTH{1'b0}};
    
-   assign A_wdata_o = A_wvalid_o ? S00_AXI_wdata : INVDATA;
-   assign B_wdata_o = B_wvalid_o ? S00_AXI_wdata : INVDATA;
-   assign C_wdata_o = C_wvalid_o ? S00_AXI_wdata : INVDATA;
-   assign D_wdata_o = D_wvalid_o ? S00_AXI_wdata : INVDATA;
-      
+   assign A_wdata_o = S00_AXI_wdata + (A_wvalid_o ? VALID : INVALID);
+   assign B_wdata_o = S00_AXI_wdata + (B_wvalid_o ? VALID : INVALID);   
+   assign C_wdata_o = S00_AXI_wdata + (C_wvalid_o ? VALID : INVALID);   
+   assign D_wdata_o = S00_AXI_wdata + (D_wvalid_o ? VALID : INVALID);   
+     
    assign A_rready_o = readChanBusy & (readChanAddr == 2'd0);
    assign B_rready_o = readChanBusy & (readChanAddr == 2'd1);
    assign C_rready_o = readChanBusy & (readChanAddr == 2'd2);

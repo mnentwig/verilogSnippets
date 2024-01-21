@@ -24,11 +24,11 @@ edit:
 	${EDITOR_EXE} ${EDIT}
 
 sim:
-	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} ${SIMTOP}
+	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -DSIM ${SIMTOP}
 	${IVVP_EXE} ${IVERILOG_OUT}
 
 simAxiReadyValid:
-	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -s simTop srcSim/simAxiToReadyValid.v
+	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -DSIM -s simTop srcSim/simAxiToReadyValid.v
 	${IVVP_EXE} ${IVERILOG_OUT}
 
 view:
