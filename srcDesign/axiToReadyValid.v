@@ -71,22 +71,61 @@ module axiToReadyValid
     input wire					D_rerror_i
     );
 
-   // === write channel ===
-   reg						writeChanBusy = 1'b0;
+   // === write address "channel" ===
+   // - closes on reception of write address from AXI
+   // - opens on completion of write transaction at user port
+   assign S00_AXI_awready = !writeAddrValid;
+   
+   // === read address "channel" ===
+   // - closes on reception of read address from AXI
+   // - opens on completion of read transaction at user port
+   assign S00_AXI_arready = !readChanOpen;
+   
+   // === write address ===
+   // - becomes valid on receiving write address from AXI
+   // - becomes invalid on completion of write transaction at user port
+   reg						writeAddrValid = 1'b0;
    reg [1:0]					writeChanAddr;
+
+   // === write path ===
+   // requires both the write address (which comes first per the AXI protocol) and AXI data
+   wire						writePathValid = writeAddrValid & S00_AXI_wvalid;
+   
+   assign A_wvalid_o = writePathValid & (writeChanAddr == 2'd0);
+   assign B_wvalid_o = writePathValid & (writeChanAddr == 2'd1);
+   assign C_wvalid_o = writePathValid & (writeChanAddr == 2'd2);
+   assign D_wvalid_o = writePathValid & (writeChanAddr == 2'd3);
+   
+   assign A_wdata_o = S00_AXI_wdata + (A_wvalid_o ? VALID : INVALID);
+   assign B_wdata_o = S00_AXI_wdata + (B_wvalid_o ? VALID : INVALID);   
+   assign C_wdata_o = S00_AXI_wdata + (C_wvalid_o ? VALID : INVALID);   
+   assign D_wdata_o = S00_AXI_wdata + (D_wvalid_o ? VALID : INVALID);   
+   
+   // === write response "channel" ===
+   // - opens on completion of write transaction at user port
+   // - closes on completion of "bresp" transaction at AXI port
+   reg						writeRespOpen = 1'd0;
    reg [1:0]					bresp;
-   reg						brespValid = 1'd0;
-   assign S00_AXI_bvalid = brespValid;   
+   assign S00_AXI_bvalid = writeRespOpen;   
    assign S00_AXI_bresp = bresp;
 
    // === read channel ===
-   reg						readChanBusy = 1'b0;
+   // - opens on receiving read address
+   // - closes on completed read transaction at user port
+   reg						readChanOpen = 1'b0;
    reg [1:0]					readChanAddr;
-   reg [1:0]					rresp;
-   reg						rrespValid = 1'd0;
-   reg [31:0]					rdata;   
 
-   // disable all "x" for Vivado module integration
+   // === read response "channel" ===
+   // - opens on completion of read transaction at user port
+   // - closes on completion of "rresp" transaction at AXI port
+   reg						readRespValid = 1'd0;
+   reg [1:0]					rresp;
+   reg [31:0]					rdata;   
+   assign S00_AXI_rvalid = readRespValid;   
+   assign S00_AXI_rresp = rresp + (readRespValid ? VALID : INVALID);   
+   assign S00_AXI_rdata = rdata + (readRespValid ? VALID : INVALID);   
+   
+   // disable all "x" for Vivado mod. integration
    // - adding 1'b0 changes nothing and gets optimized away (implementation)
    // - adding 1'bx invalidates all bits (simulation)
    localparam					VALID = 1'b0;
@@ -96,27 +135,11 @@ module axiToReadyValid
    localparam					INVALID = 1'b0;
 `endif
    
-   assign S00_AXI_rvalid = rrespValid;   
-   assign S00_AXI_rresp = rresp + (rrespValid ? VALID : INVALID);   
-   assign S00_AXI_rdata = rdata + (rrespValid ? VALID : INVALID);   
    
-   assign S00_AXI_awready = !writeChanBusy;
-   assign S00_AXI_arready = !readChanBusy;
-
-   assign A_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd0);
-   assign B_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd1);
-   assign C_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd2);
-   assign D_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd3);
-   
-   assign A_wdata_o = S00_AXI_wdata + (A_wvalid_o ? VALID : INVALID);
-   assign B_wdata_o = S00_AXI_wdata + (B_wvalid_o ? VALID : INVALID);   
-   assign C_wdata_o = S00_AXI_wdata + (C_wvalid_o ? VALID : INVALID);   
-   assign D_wdata_o = S00_AXI_wdata + (D_wvalid_o ? VALID : INVALID);   
-     
-   assign A_rready_o = readChanBusy & (readChanAddr == 2'd0);
-   assign B_rready_o = readChanBusy & (readChanAddr == 2'd1);
-   assign C_rready_o = readChanBusy & (readChanAddr == 2'd2);
-   assign D_rready_o = readChanBusy & (readChanAddr == 2'd3);
+   assign A_rready_o = readChanOpen & (readChanAddr == 2'd0);
+   assign B_rready_o = readChanOpen & (readChanAddr == 2'd1);
+   assign C_rready_o = readChanOpen & (readChanAddr == 2'd2);
+   assign D_rready_o = readChanOpen & (readChanAddr == 2'd3);
 
    wire						user_wvalid [0:3];
    assign user_wvalid[0] = A_wvalid_o;
@@ -129,7 +152,7 @@ module axiToReadyValid
    assign user_wready[1] = B_wready_i;
    assign user_wready[2] = C_wready_i;
    assign user_wready[3] = D_wready_i;
-   assign S00_AXI_wready = writeChanBusy & user_wready[writeChanAddr];   
+   assign S00_AXI_wready = writeAddrValid & user_wready[writeChanAddr];   
    
    wire						user_rvalid [0:3];
    assign user_rvalid[0] = A_rvalid_i;
@@ -168,20 +191,20 @@ module axiToReadyValid
       // === write chan: start (axi, load address) ===
       if (S00_AXI_awready & S00_AXI_awvalid) begin
 	 writeChanAddr <= S00_AXI_awaddr[3:2];
-	 writeChanBusy <= 1'b1;	 
+	 writeAddrValid <= 1'b1;	 
       end
       
       // === read chan: start (axi, load address) ===
       if (S00_AXI_arready & S00_AXI_arvalid) begin
 	 readChanAddr <= S00_AXI_araddr[3:2];
-	 readChanBusy <= 1'b1;	 
+	 readChanOpen <= 1'b1;	 
       end
 
       // === write chan: user signals completion ===
       if (user_wvalid[writeChanAddr] & user_wready[writeChanAddr]) begin
 	 bresp <= user_errorWrite[writeChanAddr] ? /*SLVERR*/2'b10 : /*OKAY*/2'b00;
-	 brespValid <= 1'b1;
-	 writeChanBusy <= 1'd0;	 
+	 writeRespOpen <= 1'b1;
+	 writeAddrValid <= 1'd0;	 
 	 writeChanAddr <= 2'dx;	 
       end
       
@@ -189,32 +212,32 @@ module axiToReadyValid
       if (user_rvalid[readChanAddr] & user_rready[readChanAddr]) begin
 	 rresp <= user_errorRead[readChanAddr] ? /*SLVERR*/2'b10 : /*OKAY*/2'b00;
 	 rdata <= user_dataRead[readChanAddr];
-	 rrespValid <= 1'b1;
-	 readChanBusy <= 1'd0;	 
+	 readRespValid <= 1'b1;
+	 readChanOpen <= 1'd0;	 
 	 readChanAddr <= 2'dx; 
       end
       
       // === write chan: axi collects response ===
       if (S00_AXI_bready & S00_AXI_bvalid) begin
-	 brespValid <= 1'b0;
+	 writeRespOpen <= 1'b0;
 	 bresp <= 2'dx;	 
       end
 
       // === read chan: axi collects response ===
       if (S00_AXI_rready & S00_AXI_rvalid) begin
-	 rrespValid <= 1'b0;
+	 readRespValid <= 1'b0;
 	 rresp <= 2'dx;
       end
 
       // === reset ===
       if (!S00_AXI_aresetn) begin
-	 brespValid <= 1'd0;
+	 writeRespOpen <= 1'd0;
 	 bresp <= 2'dx;
-	 rrespValid <= 1'd0;
+	 readRespValid <= 1'd0;
 	 rresp <= 2'dx;
-	 writeChanBusy <= 1'd0;
+	 writeAddrValid <= 1'd0;
 	 writeChanAddr <= 2'dx;
-	 readChanBusy <= 1'd0;
+	 readChanOpen <= 1'd0;
 	 readChanAddr <= 2'dx;
       end
    end
