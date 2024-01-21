@@ -18,11 +18,17 @@ help:
 	@echo "  clean		remove generated files"
 	@echo "  cleaner	remove more"
 
+	@echo "  simAxiReadyValid		run specific iverilog simulation"
+
 edit:
 	${EDITOR_EXE} ${EDIT}
 
 sim:
 	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} ${SIMTOP}
+	${IVVP_EXE} ${IVERILOG_OUT}
+
+simAxiReadyValid:
+	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -s simTop srcSim/simAxiToReadyValid.v
 	${IVVP_EXE} ${IVERILOG_OUT}
 
 view:
@@ -33,4 +39,4 @@ clean:
 	rm -f ${IVERILOG_OUT} ${VVP_OUT} .gtkwave_tmp
 cleaner: clean
 	rm -f *~
-.PHONY: help edit sim view clean
+.PHONY: help edit sim view clean simAxiReadyValid
