@@ -38,5 +38,6 @@ view:
 clean:
 	rm -f ${IVERILOG_OUT} ${VVP_OUT} .gtkwave_tmp
 cleaner: clean
-	rm -f *~
+	find . -name "*~" -exec rm -f {} \;
+
 .PHONY: help edit sim view clean simAxiReadyValid

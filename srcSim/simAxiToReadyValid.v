@@ -1,5 +1,6 @@
 `default_nettype none
 `include "axiToReadyValid.v"
+`include "rvReg.v"
 `define fail(msg) begin $error(msg); $finish(); end
 
 module simTop();
@@ -39,7 +40,15 @@ module simTop();
    reg [31:0]  userA_rData;
    reg	       userA_rValid = 0;
    wire	       userA_rReady;
-      
+
+   wire [31:0] userB_wData;      
+   wire	       userB_wValid;
+   wire	       userB_wReady;
+   
+   wire [31:0] userB_rData;
+   reg	       userB_rValid;
+   wire	       userB_rReady;
+   
    axiToReadyValid dut
      (.S00_AXI_aclk(clk), .S00_AXI_aresetn(axi_resetn),
       .S00_AXI_awaddr(axi_awaddr), 
@@ -70,8 +79,22 @@ module simTop();
       .A_rready_o(userA_rReady),
       .A_rvalid_i(userA_rValid),
       .A_rdata_i(userA_rData),
-      .A_rerror_i(1'b0)
-      );
+      .A_rerror_i(1'b0),
+      
+      .B_wvalid_o(userB_wValid),
+      .B_wready_i(userB_wReady),
+      .B_wdata_o(userB_wData),
+      .B_werror_i(1'b0),
+
+      .B_rready_o(userB_rReady),
+      .B_rvalid_i(userB_rValid),
+      .B_rdata_i(userB_rData),
+      .B_rerror_i(1'b0));
+
+   rvReg userB
+     (.clk(clk), 
+      .wv_i(userB_wValid), .wr_o(userB_wReady), .wd_i(userB_wData),
+      .rv_o(userB_rValid), .rr_i(userB_rReady), .rd_o(userB_rData));
    
    reg [31:0]  counter = 32'd0;
    always @(posedge clk) begin
@@ -110,10 +133,12 @@ module simTop();
 	   axi_wdata <= 32'hdeadbeef;	      
 	end
 
-	20: begin
-	   userA_wReady <= 1;
+	16: begin
+  	   axi_wvalid <= axi_wvalid;
+	   axi_wdata <= axi_wdata;
 	   if (!userA_wValid) `fail("expected userA_wValid");
 	   if (userA_wData != 32'hdeadbeef) `fail("userA unexpected write value");	   	   
+	   userA_wReady <= 1;
 	end
 
 	23: begin
@@ -142,9 +167,57 @@ module simTop();
 	   if (axi_rdata != 32'h12345678)`fail("incorrect readback data");
 	   axi_rready <= 1;	   
 	end
+	
 	42: begin
 	   if (axi_rvalid) `fail("not expected axi_rvalid");
 	end
+
+	// write to port B
+	50: begin
+	   axi_awaddr <= 4;
+	   axi_awvalid <= 1;	   
+	end
+	51: 
+	  if (!(axi_awvalid & axi_awready)) begin
+	     // hold
+	     axi_awaddr <= axi_awaddr;
+	     axi_awvalid <= axi_awvalid;
+	     counter <= counter;
+	  end
+	55: begin
+	   // write on AXI bus
+  	   axi_wvalid <= 1;
+	   axi_wdata <= 32'h10203040;	      
+	end
+
+	60: begin
+	   axi_bready <= 1;
+	   if (!axi_bvalid) `fail("expected axi_bvalid");
+ 	   if (axi_bresp != 2'd0) `fail("expected bresp==OKAY");
+	end
+	62: begin
+	   if (axi_bvalid) `fail("not expected axi_bvalid");
+	end
+
+	70: begin
+	   axi_araddr <= 4;
+	   axi_arvalid <= 1;	   
+	end
+
+	75: begin
+	   if (!axi_rvalid) `fail("expected axi_rvalid");
+	   if (axi_rresp != 2'd0) `fail("expected rresp==OKAY");
+	   if (axi_rdata != 32'h10203040)`fail("incorrect readback data");
+	   axi_rready <= 1;
+	end
+	
+	77: begin
+	   if (axi_rvalid) `fail("not expected axi_rvalid");
+	end
+
+
+	
+	
       endcase      
    end   
 endmodule

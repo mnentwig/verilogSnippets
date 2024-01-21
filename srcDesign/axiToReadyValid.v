@@ -71,35 +71,39 @@ module axiToReadyValid
     input wire					D_rerror_i
     );
 
-   localparam					INVDATA = {C_S00_AXI_DATA_WIDTH{1'bx}};
-      
    // === write channel ===
    reg						writeChanBusy = 1'b0;
    reg [1:0]					writeChanAddr;
-   reg [1:0]					bresp = 2'dx;
+   reg [1:0]					bresp;
    reg						brespValid = 1'd0;
    assign S00_AXI_bvalid = brespValid;   
-   assign S00_AXI_bresp = S00_AXI_bvalid ? bresp : 2'dx;   
+   assign S00_AXI_bresp = bresp;
 
    // === read channel ===
    reg						readChanBusy = 1'b0;
    reg [1:0]					readChanAddr;
-   reg [1:0]					rresp = 2'dx;
+   reg [1:0]					rresp;
    reg						rrespValid = 1'd0;
-   reg [31:0]					rdata = INVDATA;   
+   reg [31:0]					rdata;   
    
    assign S00_AXI_rvalid = rrespValid;   
-   assign S00_AXI_rresp = S00_AXI_rvalid ? rresp : 2'dx;
-   assign S00_AXI_rdata = S00_AXI_rvalid ? rdata : INVDATA;
+   assign S00_AXI_rresp = rresp;
+   assign S00_AXI_rdata = rdata;
    
    assign S00_AXI_awready = !writeChanBusy;
    assign S00_AXI_arready = !readChanBusy;
-   
-   assign A_wvalid_o = writeChanBusy & (writeChanAddr == 2'd0);
-   assign B_wvalid_o = writeChanBusy & (writeChanAddr == 2'd1);
-   assign C_wvalid_o = writeChanBusy & (writeChanAddr == 2'd2);
-   assign D_wvalid_o = writeChanBusy & (writeChanAddr == 2'd3);
 
+   assign A_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd0);
+   assign B_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd1);
+   assign C_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd2);
+   assign D_wvalid_o = writeChanBusy & S00_AXI_wvalid & (writeChanAddr == 2'd3);
+   localparam					INVDATA = {C_S00_AXI_DATA_WIDTH{1'b0}};
+   
+   assign A_wdata_o = A_wvalid_o ? S00_AXI_wdata : INVDATA;
+   assign B_wdata_o = B_wvalid_o ? S00_AXI_wdata : INVDATA;
+   assign C_wdata_o = C_wvalid_o ? S00_AXI_wdata : INVDATA;
+   assign D_wdata_o = D_wvalid_o ? S00_AXI_wdata : INVDATA;
+      
    assign A_rready_o = readChanBusy & (readChanAddr == 2'd0);
    assign B_rready_o = readChanBusy & (readChanAddr == 2'd1);
    assign C_rready_o = readChanBusy & (readChanAddr == 2'd2);
@@ -110,19 +114,20 @@ module axiToReadyValid
    assign user_wvalid[1] = B_wvalid_o;
    assign user_wvalid[2] = C_wvalid_o;
    assign user_wvalid[3] = D_wvalid_o;
-   
+      
    wire						user_wready [0:3];
    assign user_wready[0] = A_wready_i;
    assign user_wready[1] = B_wready_i;
    assign user_wready[2] = C_wready_i;
    assign user_wready[3] = D_wready_i;
+   assign S00_AXI_wready = writeChanBusy & user_wready[writeChanAddr];   
    
    wire						user_rvalid [0:3];
    assign user_rvalid[0] = A_rvalid_i;
    assign user_rvalid[1] = B_rvalid_i;
    assign user_rvalid[2] = C_rvalid_i;
    assign user_rvalid[3] = D_rvalid_i;
-
+   
    wire						user_rready[0:3];
    assign user_rready[0] = A_rready_o;
    assign user_rready[1] = B_rready_o;
@@ -174,7 +179,7 @@ module axiToReadyValid
       // === read chan: user signals completion ===
       if (user_rvalid[readChanAddr] & user_rready[readChanAddr]) begin
 	 rresp <= user_errorRead[readChanAddr] ? /*SLVERR*/2'b10 : /*OKAY*/2'b00;
-	 rdata <= user_errorRead[readChanAddr] ? INVDATA : user_dataRead[readChanAddr];
+	 rdata <= user_dataRead[readChanAddr];
 	 rrespValid <= 1'b1;
 	 readChanBusy <= 1'd0;	 
 	 readChanAddr <= 2'dx; 
@@ -190,7 +195,6 @@ module axiToReadyValid
       if (S00_AXI_rready & S00_AXI_rvalid) begin
 	 rrespValid <= 1'b0;
 	 rresp <= 2'dx;
-	 rdata <= INVDATA;	 
       end
 
       // === reset ===
@@ -199,7 +203,6 @@ module axiToReadyValid
 	 bresp <= 2'dx;
 	 rrespValid <= 1'd0;
 	 rresp <= 2'dx;
-	 rdata <= INVDATA;
 	 writeChanBusy <= 1'd0;
 	 writeChanAddr <= 2'dx;
 	 readChanBusy <= 1'd0;
