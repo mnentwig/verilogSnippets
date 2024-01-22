@@ -19,6 +19,7 @@ help:
 	@echo "  cleaner	remove more"
 
 	@echo "  simAxiReadyValid		run specific iverilog simulation"
+	@echo "  simAxiChain			run specific iverilog simulation"
 
 edit:
 	${EDITOR_EXE} ${EDIT}
@@ -31,6 +32,10 @@ simAxiReadyValid:
 	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -DSIM -s simTop srcSim/simAxiToReadyValid.v
 	${IVVP_EXE} ${IVERILOG_OUT}
 
+simAxiChain:
+	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -DSIM -s simTop srcSim/simAxiChain.v
+	${IVVP_EXE} ${IVERILOG_OUT}
+
 view:
 	@echo "splash_disable 1" > .gtkwave_tmp
 	${GTKWAVE_EXE} -r .gtkwave_tmp ${VVP_OUT} &	
@@ -40,4 +45,4 @@ clean:
 cleaner: clean
 	find . -name "*~" -exec rm -f {} \;
 
-.PHONY: help edit sim view clean simAxiReadyValid
+.PHONY: help edit sim view clean simAxiReadyValid simAxiChain

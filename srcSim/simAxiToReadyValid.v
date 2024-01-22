@@ -214,10 +214,6 @@ module simTop();
 	77: begin
 	   if (axi_rvalid) `fail("not expected axi_rvalid");
 	end
-
-
-	
-	
       endcase      
    end   
 endmodule
