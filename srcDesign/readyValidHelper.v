@@ -1,18 +1,34 @@
 // to see preprocessor output, use 
 // iverilog -E readyValidHelper.v; cat a.out
+
+// defines a ready-/valid bus as wire with a given number of data bits 
 `define readyValidWire(wireName, nBits) wire ``wireName``Ready; wire ``wireName``Valid; wire [nBits-1:0] wireName``Data;
 
+// assign ready-/valid bus of given name drive input port of given name
 `define readyValidInput(wireName, portName) .``portName``Ready_o(``wireName``Ready), ``.``portName``Valid_i(``wireName``Valid), ``.``portName``Data_i(``wireName``Data)``
+
+// assign ready-/valid bus of given name drive output port of given name
 `define readyValidOutput(wireName, portName) .``portName``Ready_i(``wireName``Ready), ``.``portName``Valid_o(``wireName``Valid), ``.``portName``Data_o(``wireName``Data)``
 
-
+// create module port list for inbound ready-/valid bus (non-ANSI style, part 1)
 `define readyValidInputPortlistNonANSI1(portName) portName``Ready_o, portName``Valid_i, portName``Data_i
+
+// create individual module ports for inbound ready-/valid bus (non-ANSI style, part 2)
 `define readyValidInputPortlistNonANSI2(portName, nBits) output wire ``portName``Ready_o; input wire ``portName``Valid_i; input wire [nBits-1:0] portName``Data_i;
+
+// create module port list for inbound ready-/valid bus (ANSI style)
 `define readyValidInputPortlistANSI(portName, nBits) output wire ``portName``Ready_o, input wire ``portName``Valid_i, input wire [nBits-1:0] portName``Data_i;
 
+// create module port list for outbound ready-/valid bus (non-ANSI style, part 1)
 `define readyValidOutputPortlistNonANSI1(portName) portName``Ready_i, portName``Valid_o, portName``Data_o
+
+// create individual module ports for outbound ready-/valid bus (non-ANSI style, part 2)
 `define readyValidOutputPortlistNonANSI2(portName, nBits) input wire ``portName``Ready_i; output wire ``portName``Valid_o; output wire [nBits-1:0] portName``Data_o;
+
+// create module port list for outbound ready-/valid bus (ANSI style)
 `define readyValidOutputPortlistANSI(portName, nBits) input wire ``portName``Ready_i, output wire ``portName``Valid_o, output wire [nBits-1:0] portName``Data_o
+
+// === example code below ===
 
 `ifdef SIM_READYVALIDHELPER
 `default_nettype none
