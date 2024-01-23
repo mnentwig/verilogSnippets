@@ -36,6 +36,10 @@ simAxiChain:
 	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -DSIM -s simTop srcSim/simAxiChain.v
 	${IVVP_EXE} ${IVERILOG_OUT}
 
+simReadyValidHelper:
+	${IVERILOG_EXE} -g2005-sv ${VINCLUDES} -o ${IVERILOG_OUT} -DSIM -DSIM_READYVALIDHELPER srcDesign/readyValidHelper.v
+	${IVVP_EXE} ${IVERILOG_OUT}
+
 view:
 	@echo "splash_disable 1" > .gtkwave_tmp
 	${GTKWAVE_EXE} -r .gtkwave_tmp ${VVP_OUT} &	
